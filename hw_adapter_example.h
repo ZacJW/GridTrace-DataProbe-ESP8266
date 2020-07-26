@@ -24,8 +24,13 @@ class Hardware_Adapter_Example : public Hardware_Adapter_ABC<T>{
     // This data request handler just generates some random cell voltage data.
     void get_data(){
       char message[256] = {0};
-      snprintf(message, 255, "{\"cell_voltage\" : [%d, %d, %d, %d, %d, %d]}",
-      random(3200,4200), random(3200,4200), random(3200,4200),
+      snprintf(message, 255, "{"
+                                 "\"cell_voltage\" : {"
+                                     "\"columns\" : [{\"name\" : \"cell_id\", \"type\" : \"integer\"},"
+                                                    "{\"name\" : \"millivolts\", \"type\" : \"integer\"}],"
+                                     "\"values\" : [[0, %d], [1, %d], [2, %d]]"
+                                 "}"
+                             "}",
       random(3200,4200), random(3200,4200), random(3200,4200));
       
       this->server->send(200, "application/json", message);
