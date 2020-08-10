@@ -102,19 +102,16 @@ class Hardware_Adapter_BMS : public Hardware_Adapter_ABC<T>{
         ntc_readings[i] = (((int16_t) response_data[23 + 2*i]) << 8) + (int16_t) response_data[24 + 2*i];
       }
       delete[] response_data;
-      
-      char ntc_string[16] = {0};
-      char *ntc_end = ntc_string;
-      if (ntc_readings[0] == 0){
-        strcpy(ntc_end, "null, ");
-        ntc_end += 6;
-      }else{
-        ntc_end += snprintf(ntc_end, 15 - (ntc_end - ntc_string), "%d, ", ntc_readings[0]);
-      }
-      if (ntc_readings[1] == 0){
-        strcpy(ntc_end, "null");
-      }else{
-        snprintf(ntc_end, 15 - (ntc_end - ntc_string), "%d", ntc_readings[1]);
+
+      char ntc_bms[8] = {0};
+      char ntc_battery[8] = {0};
+      char* ntc_strings[2] = {ntc_bms, ntc_battery};
+      for (int i = 0; i < 2; i++){
+        if (ntc_readings[i] = 0){
+          strncpy(ntc_strings[i], "null", 7);
+        }else{
+          snprintf(ntc_strings[i], 7, "%d", ntc_readings[i])
+        }
       }
 
       memset(response_pre, 0, 4);
@@ -148,7 +145,7 @@ class Hardware_Adapter_BMS : public Hardware_Adapter_ABC<T>{
                                                     "{\"name\" : \"mosfet_status\", \"type\" : \"integer\"}],"
                                                     "{\"name\" : \"bms_temperature\", \"type\" : \"integer\"}],"
                                                     "{\"name\" : \"battery_temperature\", \"type\" : \"integer\"}],"
-                                     "\"values\" : [[%d0, %d0, %d0, %d0, %d, %d, %d, %d, %d, %d, %s]]"
+                                     "\"values\" : [[%d0, %d0, %d0, %d0, %d, %d, %d, %d, %d, %d, %s, %s]]"
                                  "},"
                                  "\"cell_voltage\" : {"
                                      "\"columns\" : [{\"name\" : \"cell_id\", \"type\" : \"integer\"},"
@@ -159,7 +156,7 @@ class Hardware_Adapter_BMS : public Hardware_Adapter_ABC<T>{
       battery_voltage, battery_current, residual_cap, 
       nominal_cap, cycle_count, balance_state_low,
       balance_state_high, protection_state, rsoc,
-      mosfet_status, ntc_string, voltages);
+      mosfet_status, ntc_bms, ntc_battery, voltages);
       
       this->server->send(200, "application/json", message);
     }
