@@ -6,21 +6,6 @@
 uint8_t request_basic[] = {0xdd, 0xa5, 0x03, 0x00, 0xff, 0xfd, 0x77};
 uint8_t request_voltage[] = {0xdd, 0xa5, 0x04, 0x00, 0xff, 0xfc, 0x77};
 
-/*void purge_serial(){
-  while(Serial.available()){
-    Serial.read();
-    delay(2);
-  }
-}
-
-int16_t calculate_checksum(uint8_t *response_pre, uint8_t *response_data){
-  int16_t checksum = - response_pre[2] - response_pre[3];
-  for (int i = 0; i < response_pre[3]; i++){
-    checksum -= response_data[i];
-  }
-  return checksum;
-}*/
-
 template <class T>
 class Hardware_Adapter_BMS : public Hardware_Adapter_ABC<T>{
   private:
@@ -45,16 +30,29 @@ class Hardware_Adapter_BMS : public Hardware_Adapter_ABC<T>{
       int tries_remaining;
       for (tries_remaining = 5; tries_remaining; tries_remaining--){
         Serial.write(request, request_length);
-        Serial.readBytes(response_pre, 4);
-        if (response_pre[2] == 0x80  || response_pre[3] < 23 || response_pre[3] > 27){
-          // BMS returned error status or data content too small/big, so purge serial buffer and retry
+        Serial.flush();
+        size_t readCount = Serial.readBytes(response_pre, 4);
+        if (readCount < 4 || response_pre[2] == 0x80  || response_pre[3] < 23 || response_pre[3] > 27){
+          // BMS timed out or returned error status or data content too small/big, so purge serial buffer and retry
           purge_serial();
           continue;
         }
         response_data = new uint8_t[response_pre[3]];
-        Serial.readBytes(response_data, response_pre[3]);
+        readCount = Serial.readBytes(response_data, response_pre[3]);
+        if (readCount < response_pre[3]){
+          // BMS timed out so purge serial buffer, deallocate response_data and retry
+          purge_serial();
+          delete[] response_data;
+          continue;
+        }
 
-        Serial.readBytes(response_post, 3);
+        readCount = Serial.readBytes(response_post, 3);
+        if (readCount < 3){
+          // BMS timed out so purge serial buffer, deallocate response_data and retry
+          purge_serial();
+          delete[] response_data;
+          continue;
+        }
         int16_t checksum_received = ((int16_t) response_post[0]) << 8 + ((int16_t) response_post[1]);
         
         if (checksum_received == calculate_checksum(response_pre, response_data)){
@@ -62,6 +60,7 @@ class Hardware_Adapter_BMS : public Hardware_Adapter_ABC<T>{
         }
         delete[] response_data;
         response_data = nullptr;
+        purge_serial();
       }
       return tries_remaining;
     }
@@ -73,6 +72,7 @@ class Hardware_Adapter_BMS : public Hardware_Adapter_ABC<T>{
 
     void init(){
       Serial.begin(9600);
+      Serial.setTimeout(10);
     }
 
     void get_data(){
