@@ -36,10 +36,10 @@ void setup() {
   #else
   SSDP.setHTTPPort(80);
   #endif
-  SSDP.setName("GridSense DataProbe");
+  SSDP.setName("GridTrace DataProbe");
   SSDP.setURL(DATA_ROUTE);
-  SSDP.setModelName("GridSense DataProbe V0.1");
-  SSDP.setDeviceType("urn:grid-sense:service:data-probe:1");
+  SSDP.setModelName("GridTrace DataProbe V0.1");
+  SSDP.setDeviceType("urn:gridtrace:service:data-probe:1");
   SSDP.begin();
 }
 
